@@ -74,6 +74,10 @@ public
 tmp/
 temp/
 
+# Build outputs
+index.html
+build/
+
 # Editor directories and files
 .vscode/
 .idea/
@@ -108,3 +112,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Vercel
+.vercel

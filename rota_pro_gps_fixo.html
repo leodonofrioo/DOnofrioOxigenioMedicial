@@ -7,7 +7,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Rota Pro">
     <meta name="theme-color" content="#667eea">
-    <title>Rota Pro</title>
+    <meta name="description" content="Sistema de rota profissional com GPS para visitas médicas - D'Onofrio Oxigênio Medicinal">
+    <meta name="keywords" content="rota, gps, visitas, médico, oxigênio, medicinal">
+    <meta name="author" content="D'Onofrio Oxigênio Medicinal">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Rota Profissional - GPS | D'Onofrio Oxigênio Medicinal</title>
     <style>
         * {
             margin: 0;
@@ -895,7 +903,24 @@
         let localizacaoAtual = {...dados.ponto_partida};
         let visitaAtual = 0;
         let visitasConcluidas = [];
-        const API_KEY = "AIzaSyB2XYbuGcBjER29DXLJY14hWYm-OW8dejw";
+        
+        // Função para obter API key de forma segura
+        function getGoogleMapsApiKey() {
+            // Em produção, a API key deve ser configurada como variável de ambiente na Vercel
+            // Para desenvolvimento local, use um arquivo .env.local (não commitado)
+            const apiKey = process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 
+                          window?.GOOGLE_MAPS_API_KEY || 
+                          "CONFIGURE_SUA_API_KEY_NAS_VARIAVEIS_DE_AMBIENTE";
+            
+            if (apiKey === "CONFIGURE_SUA_API_KEY_NAS_VARIAVEIS_DE_AMBIENTE") {
+                console.error("⚠️ Google Maps API Key não configurada! Configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY nas variáveis de ambiente.");
+                mostrarNotificacao("Erro: API Key não configurada", "error");
+            }
+            
+            return apiKey;
+        }
+        
+        const API_KEY = getGoogleMapsApiKey();
         let gpsCarregado = false;
         let watchId = null;
         let horarioPorClinica = {};
