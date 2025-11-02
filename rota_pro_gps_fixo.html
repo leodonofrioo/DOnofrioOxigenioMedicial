@@ -1078,29 +1078,84 @@
             );
         }
 
-        function tentarFallbackLocalizacao() {
+        async function tentarFallbackLocalizacao() {
             console.log('🔄 Tentando localização por IP...');
             mostrarNotificacao('🌐 Tentando localizar por IP...', 'info');
-            
-            // Fallback usando API de geolocalização por IP
-            fetch('https://ipapi.co/json/')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.latitude && data.longitude) {
-                        console.log('✓ Localização por IP obtida:', data);
-                        definirLocalizacao({
-                            latitude: data.latitude,
-                            longitude: data.longitude,
-                            accuracy: 10000 // Precisão estimada para IP
-                        }, `Localização por IP (${data.city}, ${data.region})`);
-                    } else {
-                        throw new Error('Dados de localização inválidos');
+
+            // Detecta se há conexão de rede
+            const online = navigator.onLine;
+            if (!online) {
+                console.warn('⚠️ Dispositivo offline. Aplicando localização padrão.');
+                mostrarNotificacao('⚠️ Sem conexão de rede. Usando localização padrão.', 'alerta');
+                usarLocalizacaoPadrao();
+                return;
+            }
+
+            // Provedores de IP geolocation em ordem de tentativa
+            const providers = [
+                {
+                    name: 'ipapi.co',
+                    url: 'https://ipapi.co/json/',
+                    parse: (data) => ({ lat: data.latitude, lon: data.longitude, label: `${data.city}, ${data.region}` })
+                },
+                {
+                    name: 'ip-api.com',
+                    url: 'https://ip-api.com/json/',
+                    parse: (data) => ({ lat: data.lat, lon: data.lon, label: `${data.city}, ${data.regionName}` })
+                },
+                {
+                    name: 'geolocation-db.com',
+                    url: 'https://geolocation-db.com/json/',
+                    parse: (data) => ({ lat: data.latitude, lon: data.longitude, label: `${data.city}, ${data.state}` })
+                },
+                {
+                    name: 'ipinfo.io',
+                    url: 'https://ipinfo.io/json',
+                    parse: (data) => {
+                        if (!data.loc) return { lat: null, lon: null, label: data.city };
+                        const [lat, lon] = String(data.loc).split(',');
+                        return { lat: Number(lat), lon: Number(lon), label: `${data.city}, ${data.region}` };
                     }
-                })
-                .catch(error => {
-                    console.error('❌ Erro localização por IP:', error);
-                    usarLocalizacaoPadrao();
-                });
+                }
+            ];
+
+            // Helper para fetch com timeout e melhor manejo de erros
+            async function fetchWithTimeout(url, timeoutMs = 6000) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeoutMs);
+                try {
+                    const res = await fetch(url, { mode: 'cors', cache: 'no-store', signal: controller.signal });
+                    clearTimeout(id);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                } catch (err) {
+                    clearTimeout(id);
+                    throw err;
+                }
+            }
+
+            // Tenta provedores em sequência com retry simples
+            for (const provider of providers) {
+                try {
+                    console.log(`🔎 Tentando provedor IP: ${provider.name}`);
+                    const data = await fetchWithTimeout(provider.url, 6000);
+                    const parsed = provider.parse(data);
+                    if (parsed.lat && parsed.lon) {
+                        console.log(`✓ IP geolocation obtida via ${provider.name}:`, parsed);
+                        definirLocalizacao({ latitude: parsed.lat, longitude: parsed.lon, accuracy: 15000 }, `IP (${parsed.label})`);
+                        return;
+                    }
+                    console.warn(`⚠️ Dados incompletos de ${provider.name}`, data);
+                } catch (error) {
+                    console.warn(`❌ Falha no provedor ${provider.name}:`, error.message || error);
+                    // Continua para o próximo provedor
+                }
+            }
+
+            // Se nenhum provedor funcionou, usa padrão
+            console.error('❌ Nenhum provedor de IP funcionou. Aplicando localização padrão.');
+            mostrarNotificacao('⚠️ Não foi possível obter localização por IP. Usando padrão.', 'alerta');
+            usarLocalizacaoPadrao();
         }
 
         function definirLocalizacao(coords, fonte) {
