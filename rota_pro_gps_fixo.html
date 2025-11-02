@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rota Pro">
+    <meta name="theme-color" content="#667eea">
+    <title>Rota Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            position: fixed;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a5a7a;
+            border-radius: 2px;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            background: #0a0e27;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* TELA LISTA */
+        .tela-lista {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #0a0e27;
+            z-index: 100;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(0);
+        }
+
+        .tela-lista.escondida {
+            transform: translateX(-100%);
+            pointer-events: none;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            padding-top: max(12px, calc(env(safe-area-inset-top) + 8px));
+            text-align: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .header h1 {
+            font-size: 1.4em;
+            font-weight: 700;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 0.75em;
+            opacity: 0.9;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .status-gps {
+            font-size: 0.75em;
+            background: rgba(255,255,255,0.15);
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .status-gps.ativo {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+
+        .status-gps.carregando {
+            background: rgba(255, 183, 77, 0.3);
+            color: #FFB74D;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* STATS BAR */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 4px;
+            padding: 8px;
+            background: #0f1632;
+            flex-shrink: 0;
+            border-bottom: 1px solid #1a2349;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1a2349 0%, #151c38 100%);
+            padding: 8px 6px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #2a3a5f;
+        }
+
+        .stat-numero {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 1px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.65em;
+            color: #7a8fb6;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .progresso-bar {
+            height: 2px;
+            background: #0a0e27;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .progresso-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* CLINICAS LISTA */
+        .clinicas-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 6px;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        .clinica-card {
+            background: linear-gradient(135deg, #0f1632 0%, #0a0e27 100%);
+            border: 1px solid #1a2349;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease-out;
+            display: flex;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .clinica-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: #667eea;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .clinica-card:active {
+            background: linear-gradient(135deg, #151c38 0%, #0f1632 100%);
+            border-color: #667eea;
+            transform: scale(0.96);
+        }
+
+        .clinica-card.visitada {
+            opacity: 0.5;
+            border-color: #2a8a2a;
+        }
+
+        .clinica-card.visitada::before {
+            background: #4CAF50;
+        }
+
+        .clinica-card.alerta {
+            border-color: #FF9800;
+        }
+
+        .clinica-card.alerta::before {
+            background: #FF9800;
+        }
+
+        .clinica-numero {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95em;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .clinica-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .clinica-nome {
+            font-weight: 600;
+            font-size: 0.85em;
+            line-height: 1.2;
+            color: #e0e0ff;
+            word-break: break-word;
+        }
+
+        .clinica-descricao {
+            font-size: 0.7em;
+            color: #b0b0d0;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .clinica-horarios {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.7em;
+        }
+
+        .horario-item {
+            background: rgba(102, 126, 234, 0.08);
+            padding: 4px 6px;
+            border-radius: 5px;
+            border-left: 2px solid #667eea;
+        }
+
+        .horario-label {
+            color: #7a8fb6;
+            font-size: 0.65em;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            font-weight: 600;
+        }
+
+        .horario-valor {
+            color: #81C784;
+            font-weight: 600;
+            font-size: 0.8em;
+        }
+
+        .distancia-tempo {
+            display: flex;
+            gap: 10px;
+            font-size: 0.7em;
+        }
+
+        .dist-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            color: #FFB74D;
+            font-weight: 600;
+        }
+
+        .clinica-status-box {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .clinica-status {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.65em;
+            font-weight: 600;
+        }
+
+        .btn-reverter {
+            background: #EF5350;
+            color: white;
+            border: none;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.65em;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-weight: 600;
+        }
+
+        .btn-reverter:active {
+            transform: scale(0.92);
+            background: #E53935;
+        }
+
+        .alerta-horario {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid #FF9800;
+            border-radius: 5px;
+            padding: 4px 6px;
+            font-size: 0.7em;
+            color: #FFB74D;
+            text-align: center;
+        }
+
+        /* TELA DETALHES */
+        .tela-detalhes {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #0a0e27;
+            position: absolute;
+            left: 100%;
+            top: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 101;
+            overflow: hidden;
+        }
+
+        .tela-detalhes.visivel {
+            transform: translateX(-100%);
+        }
+
+        /* MAPA */
+        .mapa-section {
+            width: 100%;
+            height: 45%;
+            background: #0f1632;
+            position: relative;
+            border-bottom: 1px solid #1a2349;
+            flex-shrink: 0;
+        }
+
+        #mapaGoogle {
+            width: 100%;
+            height: 100%;
+        }
+
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn-localizacao {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            z-index: 10;
+            transition: all 0.15s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .btn-localizacao:active {
+            transform: scale(0.92);
+        }
+
+        /* INFO SECTION */
+        .info-section {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 12px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .numero-visita-grande {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #0f1632 0%, #151c38 100%);
+            border: 1px solid #1a2349;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            font-size: 0.65em;
+            color: #7a8fb6;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .info-conteudo {
+            font-size: 0.9em;
+            color: #e0e0ff;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .info-tipo {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .info-telefone {
+            font-size: 1em;
+            color: #FFB74D;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .info-telefone:active {
+            color: #FFC176;
+        }
+
+        .info-horario {
+            color: #81C784;
+            font-weight: 500;
+        }
+
+        .info-status-horario {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 3px solid #FF9800;
+            padding: 8px 10px;
+            border-radius: 5px;
+            margin: 8px 0;
+            font-size: 0.8em;
+            color: #FFB74D;
+        }
+
+        .info-status-horario.almoco {
+            background: rgba(255, 152, 0, 0.1);
+            border-left-color: #FF9800;
+        }
+
+        /* BOTOES */
+        .botoes-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 12px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            background: #0a0e27;
+            border-top: 1px solid #1a2349;
+            flex-shrink: 0;
+        }
+
+        .btn-acao {
+            padding: 12px 8px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.15s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-direction: column;
+            min-height: 50px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .btn-acao:active {
+            transform: scale(0.96);
+        }
+
+        .btn-waze {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366, #20ba5c);
+            color: white;
+        }
+
+        .btn-proxima {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            min-height: 46px;
+        }
+
+        .btn-concluida {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            margin-top: 4px;
+            min-height: 46px;
+        }
+
+        .btn-voltar {
+            background: #2a3a5f;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.15s;
+            position: absolute;
+            left: 10px;
+            top: max(10px, calc(env(safe-area-inset-top) + 6px));
+            z-index: 20;
+            border: 1px solid #3a4a7f;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .btn-voltar:active {
+            background: #3a4a7f;
+            transform: scale(0.94);
+        }
+
+        .header-detalhes {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px;
+            padding-top: max(10px, calc(env(safe-area-inset-top) + 6px));
+            text-align: center;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .header-detalhes h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 1px;
+            word-break: break-word;
+        }
+
+        .header-detalhes p {
+            font-size: 0.75em;
+            opacity: 0.9;
+        }
+
+        /* TELA FINAL */
+        .tela-final {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center;
+            gap: 16px;
+            padding: 20px;
+            position: absolute;
+            left: 100%;
+            top: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 99;
+        }
+
+        .tela-final.visivel {
+            transform: translateX(-100%);
+        }
+
+        .icone-celebracao {
+            font-size: 3.5em;
+            animation: bounce 0.6s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .tela-final h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+
+        .tela-final p {
+            font-size: 1em;
+            opacity: 0.95;
+        }
+
+        .btn-novo-dia {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .btn-novo-dia:active {
+            transform: scale(0.96);
+        }
+
+        /* NOTIFICACAO */
+        .notificacao {
+            position: fixed;
+            top: max(12px, calc(env(safe-area-inset-top) + 8px));
+            left: 8px;
+            right: 8px;
+            background: #0f1632;
+            border: 1px solid #1a2349;
+            border-radius: 8px;
+            padding: 10px 12px;
+            z-index: 1000;
+            animation: slideDown 0.3s ease-out;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            border-left: 4px solid #667eea;
+            font-size: 0.85em;
+        }
+
+        .notificacao.alerta {
+            border-left-color: #FF9800;
+        }
+
+        .notificacao.erro {
+            border-left-color: #F44336;
+        }
+
+        .notificacao.sucesso {
+            border-left-color: #4CAF50;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .header h1 {
+                font-size: 1.2em;
+            }
+
+            .clinica-nome {
+                font-size: 0.8em;
+            }
+
+            .stat-numero {
+                font-size: 1.2em;
+            }
+
+            .btn-acao {
+                font-size: 0.8em;
+                min-height: 46px;
+            }
+        }
+
+        @supports (padding: max(0px)) {
+            .clinicas-container {
+                padding: 6px;
+                padding-bottom: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- TELA 1: LISTA -->
+        <div class="tela-lista ativa" id="telaLista">
+            <div class="header">
+                <h1>🚀 Rota Pro</h1>
+                <p>Sistema Profissional de Vendas</p>
+                <div class="status-gps" id="statusGPS">📍 Detectando...</div>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-numero" id="totalClinicas">17</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-numero" id="concluidas">0</div>
+                    <div class="stat-label">Concluídas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-numero" id="restantes">17</div>
+                    <div class="stat-label">Restantes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-numero" id="tempoRestante">0h</div>
+                    <div class="stat-label">Tempo</div>
+                </div>
+            </div>
+
+            <div class="progresso-bar">
+                <div class="progresso-fill" id="progressFill"></div>
+            </div>
+
+            <div class="clinicas-container" id="clinicasContainer"></div>
+        </div>
+
+        <!-- TELA 2: DETALHES -->
+        <div class="tela-detalhes" id="telaDetalhes">
+            <button class="btn-voltar" onclick="voltarParaLista()">← Voltar</button>
+
+            <div class="header-detalhes">
+                <h2 id="nomeClinDetalhes">Clínica</h2>
+                <p id="visitaNumDetalhes">Visita 1 de 17</p>
+            </div>
+
+            <div class="mapa-section" id="mapaSecao">
+                <div id="mapaGoogle"></div>
+                <button class="btn-localizacao" title="Atualizar" onclick="atualizarMapaAtual()">📍</button>
+            </div>
+
+            <div class="info-section">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div class="numero-visita-grande" id="numVisitaGrande">1</div>
+                    <span class="info-tipo" id="tipoClinicaDetalhes">Veterinária</span>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">📍 Endereço</div>
+                    <div class="info-conteudo" id="enderecoDetalhes">Endereço</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">📝 Sobre o Estabelecimento</div>
+                    <div class="info-conteudo" id="descricaoDetalhes">Descrição</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">📏 Distância do Anterior</div>
+                    <div class="info-conteudo" id="distanciaDetalhes" style="color: #FFB74D;">0 km</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">🕐 Horário de Funcionamento</div>
+                    <div class="info-horario" id="horarioDetalhes">Seg-Sex: 9:00-18:00</div>
+                    <div class="info-status-horario" id="statusHorario"></div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">📞 Telefone</div>
+                    <div class="info-telefone" id="telefoneDetalhes" onclick="abrirWhatsapp()" title="Toque para WhatsApp">Telefone</div>
+                </div>
+            </div>
+
+            <div class="botoes-section">
+                <button class="btn-acao btn-waze" onclick="abrirWaze()">
+                    <span>🗺️</span>
+                    <span>Waze</span>
+                </button>
+                <button class="btn-acao btn-whatsapp" onclick="abrirWhatsapp()">
+                    <span>💬</span>
+                    <span>WhatsApp</span>
+                </button>
+                <button class="btn-acao btn-proxima" onclick="proximaVisita()">
+                    ➜ Próxima Visita
+                </button>
+                <button class="btn-acao btn-concluida" onclick="marcarConcluida()">
+                    ✓ Visita Concluída
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA 3: FINAL -->
+        <div class="tela-final" id="telaFinal">
+            <div class="icone-celebracao">🎉</div>
+            <h1>Parabéns!</h1>
+            <p>Todas as visitas concluídas!</p>
+            <button class="btn-novo-dia" onclick="reiniciar()">Novo Dia</button>
+        </div>
+    </div>
+
+    <script>
+        const dados = {
+            "ponto_partida": {"latitude": -23.0657, "longitude": -46.5617},
+            "clinicas": [
+                {"id": 1, "nome": "PetSim Vet", "tipo": "Vet 24h", "endereco": "Rua Josias Morais Soares, 50", "descricao": "Clínica veterinária 24h com atendimento emergencial. Realiza cirurgias, internações e dispõe de ventiladores pulmonares para animais gravemente enfermos.", "latitude": -23.0680, "longitude": -46.5635, "telefone": "(11) 4412-4900", "horario": "24h", "horario_abertura": "00:00", "horario_fechamento": "23:59", "pausa_almoco_inicio": null, "pausa_almoco_fim": null, "ordem_visita": 1},
+                {"id": 2, "nome": "GiO Estética", "tipo": "Estética", "endereco": "Avenida São João, 153", "descricao": "Clínica de estética avançada com aparelhos de última geração. Oferece procedimentos anestésicos e cirurgias cosméticas que necessitam de oxigênio medicinal.", "latitude": -23.0685, "longitude": -46.5640, "telefone": "(11) 4413-1651", "horario": "Seg-Sex: 9:00-18:00", "horario_abertura": "09:00", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 2},
+                {"id": 3, "nome": "Oligoflora", "tipo": "Estética", "endereco": "Avenida São João, 194", "descricao": "Spa e clínica de estética premium. Realiza procedimentos com sedação estética e oferece salas de recuperação pós-procedimento.", "latitude": -23.0688, "longitude": -46.5645, "telefone": "(11) 2427-1280", "horario": "Seg-Sex: 8:00-21:00", "horario_abertura": "08:00", "horario_fechamento": "21:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 3},
+                {"id": 4, "nome": "Centro Estética Mirian", "tipo": "Estética", "endereco": "Avenida Atibaia, 300", "descricao": "Centro especializado em procedimentos estéticos avançados. Dispõe de salas de cirurgia e utiliza anestesia para procedimentos mais complexos.", "latitude": -23.0700, "longitude": -46.5650, "telefone": "(11) 4413-0618", "horario": "Seg-Sex: 10:00-18:00", "horario_abertura": "10:00", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 4},
+                {"id": 5, "nome": "Emporium da Beleza", "tipo": "Estética", "endereco": "Rua Jaír Chaves Russomano, 32", "descricao": "Studio de beleza e wellness. Oferece tratamentos corporais intensivos e procedimentos de rejuvenescimento com técnicas anestésicas.", "latitude": -23.0730, "longitude": -46.5520, "telefone": "(11) 3362-1234", "horario": "Seg-Sex: 9:00-19:00", "horario_abertura": "09:00", "horario_fechamento": "19:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 5},
+                {"id": 6, "nome": "Hospital Veterinário", "tipo": "Vet 24h", "endereco": "Avenida Professor Alberto de Carvalho Pinto, 835", "descricao": "Hospital veterinário de grande porte com estrutura completa. Internações, cirurgias complexas e UTI veterinária com sistemas de ventilação.", "latitude": -23.0700, "longitude": -46.5520, "telefone": "(11) 4413-5555", "horario": "24h", "horario_abertura": "00:00", "horario_fechamento": "23:59", "pausa_almoco_inicio": null, "pausa_almoco_fim": null, "ordem_visita": 6},
+                {"id": 7, "nome": "Laboratório PetLab", "tipo": "Lab", "endereco": "Rua Papa Paulo VI, 114", "descricao": "Laboratório especializado em análises veterinárias. Realiza procedimentos de anestesia para coleta de amostras e possui centro de diagnóstico por imagem.", "latitude": -23.0730, "longitude": -46.5610, "telefone": "(11) 97458-0068", "horario": "Seg-Sex: 8:30-17:30", "horario_abertura": "08:30", "horario_fechamento": "17:30", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 7},
+                {"id": 8, "nome": "Espaço Clô Escudeiro", "tipo": "Estética", "endereco": "Rua Magnólia, 69", "descricao": "Estúdio de beleza especializado em procedimentos faciais e corporais. Oferece tratamentos com sedação leve e pós-operatório controlado.", "latitude": -23.0750, "longitude": -46.5610, "telefone": "(11) 98765-4321", "horario": "Seg-Sex: 9:00-18:00", "horario_abertura": "09:00", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 8},
+                {"id": 9, "nome": "Além do Olhar", "tipo": "Estética", "endereco": "Alameda Lucas Nogueira Garcez, 1667", "descricao": "Clínica de estética oftalmológica e procedimentos delicados. Utiliza anestesia tópica e local para procedimentos de blefaroplastia e injeções.", "latitude": -23.0810, "longitude": -46.5600, "telefone": "(11) 94593-3418", "horario": "Seg-Sex: 9:00-18:00", "horario_abertura": "09:00", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 9},
+                {"id": 10, "nome": "Centro Vet Integrado", "tipo": "Vet", "endereco": "Alameda Professor Lucas Nogueira Garcez, 2972", "descricao": "Centro veterinário completo com cirurgias eletivas e emergenciais. Dispõe de salas de cirurgia com monitoramento anestésico avançado.", "latitude": -23.0820, "longitude": -46.5600, "telefone": "(11) 4413-7788", "horario": "Seg-Sex: 8:30-17:00", "horario_abertura": "08:30", "horario_fechamento": "17:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 10},
+                {"id": 11, "nome": "Polimed", "tipo": "Vet", "endereco": "Avenida São Paulo, 1360", "descricao": "Clínica veterinária com especialidades em cirurgia e ortopedia. Realiza procedimentos anestésicos seguros com equipamentos de monitoramento.", "latitude": -23.0570, "longitude": -46.5400, "telefone": "(11) 94047-1346", "horario": "Seg-Sex: 9:00-18:00", "horario_abertura": "09:00", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 11},
+                {"id": 12, "nome": "Bicho é Vida", "tipo": "Vet", "endereco": "Alameda Ribeirão Preto, 50", "descricao": "Clínica veterinária com foco em bem-estar animal. Realiza cirurgias eletivas e terapias pós-operatória com suporte anestésico.", "latitude": -23.0900, "longitude": -46.5720, "telefone": "(11) 4402-3985", "horario": "Seg-Sex: 8:30-18:00", "horario_abertura": "08:30", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 12},
+                {"id": 13, "nome": "Arca de Noé", "tipo": "Vet", "endereco": "Avenida Atibaia, 616", "descricao": "Clínica veterinária com atendimento geral e cirurgias. Oferece suporte anestésico completo e recuperação pós-operatória monitorada.", "latitude": -23.0610, "longitude": -46.5830, "telefone": "(11) 4412-9786", "horario": "Seg-Sex: 9:00-17:00", "horario_abertura": "09:00", "horario_fechamento": "17:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 13},
+                {"id": 14, "nome": "Ecovivarium", "tipo": "Vet", "endereco": "Rua Dr. Josaphat de Oliveira, 215", "descricao": "Centro veterinário sustentável. Realiza procedimentos cirúrgicos com anestesia segura e possui sala de recuperação com monitoramento.", "latitude": -23.0810, "longitude": -46.5490, "telefone": "(11) 3402-2734", "horario": "Seg-Sex: 9:00-17:00", "horario_abertura": "09:00", "horario_fechamento": "17:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 14},
+                {"id": 15, "nome": "You Zen Spa", "tipo": "Estética", "endereco": "Rua Esmeraldo Tarquinio, 115", "descricao": "Spa de bem-estar premium. Oferece tratamentos de medicina estética com sedação controlada e protocolos anestésicos avançados.", "latitude": -23.0720, "longitude": -46.5400, "telefone": "(11) 3362-5678", "horario": "Seg-Sex: 10:00-19:00", "horario_abertura": "10:00", "horario_fechamento": "19:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 15},
+                {"id": 16, "nome": "Bioferas", "tipo": "Vet", "endereco": "Avenida Dona Gertrudes, 1071", "descricao": "Clínica veterinária e centro estético animal. Realiza procedimentos estéticos e cirurgias com uso de anestesia geral segura.", "latitude": -23.0650, "longitude": -46.5490, "telefone": "(11) 4412-5361", "horario": "Seg-Sex: 8:30-18:00", "horario_abertura": "08:30", "horario_fechamento": "18:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:30", "ordem_visita": 16},
+                {"id": 17, "nome": "Vet & Pet", "tipo": "Vet", "endereco": "Alameda Ribeirão Preto, 50", "descricao": "Clínica veterinária com estrutura moderna. Oferece cirurgias variadas e procedimentos anestésicos com monitoramento contínuo.", "latitude": -23.0900, "longitude": -46.5720, "telefone": "(11) 4402-3985", "horario": "Seg-Sex: 9:00-17:00", "horario_abertura": "09:00", "horario_fechamento": "17:00", "pausa_almoco_inicio": "12:00", "pausa_almoco_fim": "13:00", "ordem_visita": 17}
+            ]
+        };
+
+        let localizacaoAtual = {...dados.ponto_partida};
+        let visitaAtual = 0;
+        let visitasConcluidas = [];
+        const API_KEY = "AIzaSyB2XYbuGcBjER29DXLJY14hWYm-OW8dejw";
+        let gpsCarregado = false;
+        let watchId = null;
+        let horarioPorClinica = {};
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+            const deltaLat = (lat2 - lat1) * Math.PI / 180;
+            const deltaLng = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                      Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                      Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function calcularTempoMinutos(distancia) {
+            return Math.round((distancia / 40) * 60);
+        }
+
+        function calcularHorarios() {
+            horarioPorClinica = {};
+            const clinicasNaoConcluidas = dados.clinicas.filter(c => !visitasConcluidas.includes(c.id));
+            if (clinicasNaoConcluidas.length === 0) return;
+
+            const primeira = clinicasNaoConcluidas[0];
+            const distancia1 = calcularDistancia(localizacaoAtual.latitude, localizacaoAtual.longitude, primeira.latitude, primeira.longitude);
+            const tempo1 = calcularTempoMinutos(distancia1);
+            const agora = new Date();
+            const chegada1 = new Date(agora.getTime() + (tempo1 + 5) * 60000);
+            const saida1 = new Date(chegada1.getTime() + 15 * 60000);
+
+            horarioPorClinica[primeira.id] = {
+                distancia: distancia1.toFixed(1),
+                tempo: tempo1,
+                horaChegada: `${String(chegada1.getHours()).padStart(2, '0')}:${String(chegada1.getMinutes()).padStart(2, '0')}`,
+                horaSaida: `${String(saida1.getHours()).padStart(2, '0')}:${String(saida1.getMinutes()).padStart(2, '0')}`
+            };
+
+            for (let i = 1; i < clinicasNaoConcluidas.length; i++) {
+                const anterior = clinicasNaoConcluidas[i - 1];
+                const atual = clinicasNaoConcluidas[i];
+                const horarioAnterior = horarioPorClinica[anterior.id];
+
+                const distancia = calcularDistancia(anterior.latitude, anterior.longitude, atual.latitude, atual.longitude);
+                const tempo = calcularTempoMinutos(distancia);
+                
+                const [hSaida, mSaida] = horarioAnterior.horaSaida.split(':').map(Number);
+                const baseSaida = new Date();
+                baseSaida.setHours(hSaida, mSaida, 0, 0);
+                
+                const chegada = new Date(baseSaida.getTime() + (tempo + 5) * 60000);
+                const saida = new Date(chegada.getTime() + 15 * 60000);
+
+                horarioPorClinica[atual.id] = {
+                    distancia: distancia.toFixed(1),
+                    tempo: tempo,
+                    horaChegada: `${String(chegada.getHours()).padStart(2, '0')}:${String(chegada.getMinutes()).padStart(2, '0')}`,
+                    horaSaida: `${String(saida.getHours()).padStart(2, '0')}:${String(saida.getMinutes()).padStart(2, '0')}`
+                };
+            }
+        }
+
+        function verificarHorarioOperacional(clinica, horaPrevista) {
+            const [h, m] = horaPrevista.split(':').map(Number);
+            const horaPrevistaMinutos = h * 60 + m;
+            
+            if (clinica.horario === '24h') return { aberto: true };
+
+            const [hAb, mAb] = clinica.horario_abertura.split(':').map(Number);
+            const [hFe, mFe] = clinica.horario_fechamento.split(':').map(Number);
+            const aberturaMinutos = hAb * 60 + mAb;
+            const fechamentoMinutos = hFe * 60 + mFe;
+
+            if (horaPrevistaMinutos < aberturaMinutos) return { aberto: false, mensagem: `Abre ${clinica.horario_abertura}` };
+            if (horaPrevistaMinutos >= fechamentoMinutos - 15) return { aberto: false, mensagem: `Fecha ${clinica.horario_fechamento}` };
+
+            if (clinica.pausa_almoco_inicio) {
+                const [hAlmA, mAlmA] = clinica.pausa_almoco_inicio.split(':').map(Number);
+                const [hAlmF, mAlmF] = clinica.pausa_almoco_fim.split(':').map(Number);
+                const almocoInicioMin = hAlmA * 60 + mAlmA;
+                const almocoFimMin = hAlmF * 60 + mAlmF;
+                if (horaPrevistaMinutos >= almocoInicioMin && horaPrevistaMinutos < almocoFimMin) {
+                    return { aberto: false, mensagem: `Pausa almoço` };
+                }
+            }
+            return { aberto: true };
+        }
+
+        function obterLocalizacao() {
+            console.log('🔍 Iniciando GPS...');
+            
+            if (!navigator.geolocation) {
+                console.error('❌ Geolocalização não suportada');
+                mostrarNotificacao('Geolocalização não suportada', 'erro');
+                gpsCarregado = true;
+                atualizarStatusGPS();
+                return;
+            }
+
+            // TIMEOUT para GPS
+            const timeoutId = setTimeout(() => {
+                if (!gpsCarregado) {
+                    console.warn('⏱️ GPS timeout - usando padrão');
+                    gpsCarregado = true;
+                    mostrarNotificacao('Usando localização padrão', 'alerta');
+                    atualizarStatusGPS();
+                    calcularHorarios();
+                    renderizarLista();
+                }
+            }, 8000);
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    clearTimeout(timeoutId);
+                    console.log('✓ GPS obtido:', position.coords);
+                    localizacaoAtual = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    gpsCarregado = true;
+                    atualizarStatusGPS();
+                    calcularHorarios();
+                    renderizarLista();
+                    iniciarWatchPosition();
+                },
+                (error) => {
+                    clearTimeout(timeoutId);
+                    console.error('❌ Erro GPS:', error.code, error.message);
+                    gpsCarregado = true;
+                    mostrarNotificacao('Usando localização padrão (Atibaia)', 'alerta');
+                    atualizarStatusGPS();
+                    calcularHorarios();
+                    renderizarLista();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 7000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function iniciarWatchPosition() {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const novaLocalizacao = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    const distancia = Math.sqrt(Math.pow(novaLocalizacao.latitude - localizacaoAtual.latitude, 2) + Math.pow(novaLocalizacao.longitude - localizacaoAtual.longitude, 2)) * 111000;
+                    if (distancia > 50) {
+                        console.log('📍 Localização atualizada');
+                        localizacaoAtual = novaLocalizacao;
+                        calcularHorarios();
+                        renderizarLista();
+                    }
+                },
+                (error) => {
+                    console.error('Erro watch:', error.code);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+            );
+        }
+
+        function atualizarStatusGPS() {
+            const statusEl = document.getElementById('statusGPS');
+            if (gpsCarregado) {
+                statusEl.textContent = '✓ GPS Ativo';
+                statusEl.className = 'status-gps ativo';
+            } else {
+                statusEl.textContent = '📍 Detectando...';
+                statusEl.className = 'status-gps carregando';
+            }
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById('clinicasContainer');
+            container.innerHTML = '';
+
+            dados.clinicas.forEach((clinica) => {
+                const visitada = visitasConcluidas.includes(clinica.id);
+                const horarios = horarioPorClinica[clinica.id] || {};
+                const horarioStatus = verificarHorarioOperacional(clinica, horarios.horaChegada || '10:00');
+
+                const card = document.createElement('div');
+                card.className = `clinica-card ${visitada ? 'visitada' : ''} ${horarios.horaChegada && !horarioStatus.aberto ? 'alerta' : ''}`;
+                
+                const conteudoHorarios = !visitada ? `
+                    <div class="clinica-descricao">${clinica.descricao}</div>
+                    <div class="clinica-horarios">
+                        <div class="horario-item">
+                            <div class="horario-label">Chegada</div>
+                            <div class="horario-valor">${horarios.horaChegada || '--:--'}</div>
+                        </div>
+                        <div class="horario-item">
+                            <div class="horario-label">Saída</div>
+                            <div class="horario-valor">${horarios.horaSaida || '--:--'}</div>
+                        </div>
+                    </div>
+                    <div class="distancia-tempo">
+                        <span class="dist-item">📍 ${horarios.distancia || '0'}km</span>
+                        <span class="dist-item">⏱️ ${(horarios.tempo || 0) + 5}min</span>
+                    </div>
+                    ${horarios.horaChegada && !horarioStatus.aberto ? `<div class="alerta-horario">⚠️ ${horarioStatus.mensagem}</div>` : ''}
+                ` : '<div style="color: #7a8fb6; font-size: 0.7em;">✓ Visitada</div>';
+
+                card.innerHTML = `
+                    <div class="clinica-numero">${clinica.ordem_visita}</div>
+                    <div class="clinica-info">
+                        <div class="clinica-nome">${clinica.nome}</div>
+                        ${conteudoHorarios}
+                        ${visitada ? `
+                            <div class="clinica-status-box">
+                                <span class="clinica-status">✓</span>
+                                <button class="btn-reverter" onclick="event.stopPropagation(); reverterVisita(${clinica.id})">↶</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                card.onclick = () => !visitada && abrirVisita(clinica.id);
+                container.appendChild(card);
+            });
+
+            atualizarStats();
+        }
+
+        function abrirVisita(clinicaId) {
+            const clinica = dados.clinicas.find(c => c.id === clinicaId);
+            if (!clinica) return;
+            
+            visitaAtual = clinica.ordem_visita - 1;
+            const horarios = horarioPorClinica[clinica.id] || {};
+            const horarioStatus = verificarHorarioOperacional(clinica, horarios.horaChegada || '10:00');
+
+            document.getElementById('nomeClinDetalhes').textContent = clinica.nome;
+            document.getElementById('visitaNumDetalhes').textContent = `${clinica.ordem_visita}/${dados.clinicas.length}`;
+            document.getElementById('numVisitaGrande').textContent = clinica.ordem_visita;
+            document.getElementById('tipoClinicaDetalhes').textContent = clinica.tipo;
+            document.getElementById('enderecoDetalhes').textContent = clinica.endereco;
+            document.getElementById('descricaoDetalhes').textContent = clinica.descricao;
+            document.getElementById('distanciaDetalhes').textContent = `${horarios.distancia || '0'}km (${(horarios.tempo || 0) + 5}min)`;
+            document.getElementById('telefoneDetalhes').textContent = clinica.telefone;
+            document.getElementById('horarioDetalhes').textContent = clinica.horario;
+
+            const statusEl = document.getElementById('statusHorario');
+            if (horarios.horaChegada && !horarioStatus.aberto) {
+                statusEl.innerHTML = `⚠️ ${horarioStatus.mensagem}`;
+                statusEl.className = 'info-status-horario almoco';
+            } else {
+                statusEl.innerHTML = `✓ ${horarios.horaChegada || '--:--'} → ${horarios.horaSaida || '--:--'}`;
+                statusEl.className = 'info-status-horario';
+            }
+
+            document.getElementById('telaLista').classList.add('escondida');
+            document.getElementById('telaDetalhes').classList.add('visivel');
+
+            setTimeout(() => carregarMapa(clinica), 100);
+        }
+
+        function carregarMapa(clinica) {
+            const mapaEl = document.getElementById('mapaGoogle');
+            const link = `https://www.google.com/maps/embed/v1/directions?key=${API_KEY}&origin=${localizacaoAtual.latitude},${localizacaoAtual.longitude}&destination=${clinica.latitude},${clinica.longitude}&mode=driving`;
+            mapaEl.innerHTML = `<iframe src="${link}" allowfullscreen="" loading="lazy"></iframe>`;
+        }
+
+        function atualizarMapaAtual() {
+            const clinicaAtual = dados.clinicas[visitaAtual];
+            if (clinicaAtual) carregarMapa(clinicaAtual);
+        }
+
+        function voltarParaLista() {
+            document.getElementById('telaDetalhes').classList.remove('visivel');
+            document.getElementById('telaLista').classList.remove('escondida');
+        }
+
+        function abrirWaze() {
+            const clinica = dados.clinicas[visitaAtual];
+            if (!clinica) return;
+            window.open(`https://waze.com/ul?ll=${clinica.latitude},${clinica.longitude}&navigate=yes`, '_blank');
+        }
+
+        function abrirWhatsapp() {
+            const clinica = dados.clinicas[visitaAtual];
+            if (!clinica) return;
+            const telefone = clinica.telefone.replace(/[^\d]/g, '').slice(-10);
+            const mensagem = `Olá! Sou Eduardo, representante de vendas de oxigênio medicinal. Você teria um momento?`;
+            window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`, '_blank');
+        }
+
+        function proximaVisita() {
+            if (visitaAtual < dados.clinicas.length - 1) {
+                visitaAtual++;
+                abrirVisita(dados.clinicas[visitaAtual].id);
+            } else {
+                mostrarFinal();
+            }
+        }
+
+        function marcarConcluida() {
+            const clinica = dados.clinicas[visitaAtual];
+            if (!clinica || visitasConcluidas.includes(clinica.id)) return;
+            visitasConcluidas.push(clinica.id);
+            calcularHorarios();
+            renderizarLista();
+            mostrarNotificacao('✓ Visita concluída', 'sucesso');
+            proximaVisita();
+        }
+
+        function reverterVisita(clinicaId) {
+            const idx = visitasConcluidas.indexOf(clinicaId);
+            if (idx > -1) {
+                visitasConcluidas.splice(idx, 1);
+                calcularHorarios();
+                renderizarLista();
+                mostrarNotificacao('↶ Visita desfeita', 'alerta');
+            }
+        }
+
+        function mostrarFinal() {
+            document.getElementById('telaDetalhes').classList.remove('visivel');
+            document.getElementById('telaFinal').classList.add('visivel');
+        }
+
+        function reiniciar() {
+            visitasConcluidas = [];
+            visitaAtual = 0;
+            document.getElementById('telaFinal').classList.remove('visivel');
+            document.getElementById('telaLista').classList.remove('escondida');
+            calcularHorarios();
+            renderizarLista();
+        }
+
+        function atualizarStats() {
+            const concluidas = visitasConcluidas.length;
+            const restantes = dados.clinicas.length - concluidas;
+            document.getElementById('concluidas').textContent = concluidas;
+            document.getElementById('restantes').textContent = restantes;
+            const percentual = (concluidas / dados.clinicas.length) * 100;
+            document.getElementById('progressFill').style.width = percentual + '%';
+        }
+
+        function mostrarNotificacao(mensagem, tipo = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notificacao ${tipo}`;
+            notif.textContent = mensagem;
+            document.body.appendChild(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 300);
+            }, 2500);
+        }
+
+        // INICIAR TUDO QUANDO PÁGINA CARREGAR
+        window.addEventListener('load', () => {
+            console.log('📱 Página carregada - iniciando GPS');
+            obterLocalizacao();
+        });
+
+        // TAMBÉM TENTA LOGO AO ABRIR (para mobile)
+        obterLocalizacao();
+    </script>
+</body>
+</html>
