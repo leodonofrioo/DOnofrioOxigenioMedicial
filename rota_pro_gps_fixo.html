@@ -768,6 +768,20 @@
                 padding-bottom: 6px;
             }
         }
+
+        .gps-actions {
+            margin-top: 6px;
+        }
+        .btn-definir {
+            background: #1a2349;
+            color: #e5e7ff;
+            border: 1px solid #2b3a6d;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .btn-definir:hover { background: #24336b; }
     </style>
 </head>
 <body>
@@ -778,6 +792,9 @@
                 <h1>🚀 Rota Pro</h1>
                 <p>Sistema Profissional de Vendas</p>
                 <div class="status-gps" id="statusGPS">📍 Detectando...</div>
+                <div class="gps-actions">
+                    <button id="btnDefinirLocalizacao" class="btn-definir">Definir localização manual</button>
+                </div>
             </div>
 
             <div class="stats-bar">
@@ -1092,16 +1109,17 @@
             }
 
             // Provedores de IP geolocation em ordem de tentativa
+            const isHttps = window.location.protocol === 'https:';
             const providers = [
+                {
+                    name: 'ipwho.is',
+                    url: 'https://ipwho.is/',
+                    parse: (data) => ({ lat: data.latitude, lon: data.longitude, label: `${data.city}, ${data.region}` })
+                },
                 {
                     name: 'ipapi.co',
                     url: 'https://ipapi.co/json/',
                     parse: (data) => ({ lat: data.latitude, lon: data.longitude, label: `${data.city}, ${data.region}` })
-                },
-                {
-                    name: 'ip-api.com',
-                    url: 'https://ip-api.com/json/',
-                    parse: (data) => ({ lat: data.lat, lon: data.lon, label: `${data.city}, ${data.regionName}` })
                 },
                 {
                     name: 'geolocation-db.com',
@@ -1118,6 +1136,14 @@
                     }
                 }
             ];
+            // ip-api.com (HTTP) somente quando a página está em HTTP (evita mixed content em produção)
+            if (!isHttps) {
+                providers.push({
+                    name: 'ip-api.com',
+                    url: 'http://ip-api.com/json/',
+                    parse: (data) => ({ lat: data.lat, lon: data.lon, label: `${data.city}, ${data.regionName}` })
+                });
+            }
 
             // Helper para fetch com timeout e melhor manejo de erros
             async function fetchWithTimeout(url, timeoutMs = 6000) {
@@ -1414,6 +1440,26 @@
         window.addEventListener('load', () => {
             console.log('📱 Página carregada - iniciando GPS');
             obterLocalizacao();
+
+            const btn = document.getElementById('btnDefinirLocalizacao');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const valor = window.prompt('Digite latitude,longitude (ex.: -23.55,-46.63):');
+                    if (!valor) return;
+                    const partes = valor.split(',').map(v => v.trim());
+                    if (partes.length !== 2) {
+                        mostrarNotificacao('Formato inválido. Use: lat,lon', 'erro');
+                        return;
+                    }
+                    const lat = Number(partes[0]);
+                    const lon = Number(partes[1]);
+                    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+                        mostrarNotificacao('Valores inválidos. Use números.', 'erro');
+                        return;
+                    }
+                    definirLocalizacao({ latitude: lat, longitude: lon, accuracy: 5000 }, 'localização manual');
+                });
+            }
         });
 
         // TAMBÉM TENTA LOGO AO ABRIR (para mobile)
