@@ -728,6 +728,10 @@
             border-left-color: #4CAF50;
         }
 
+        .notificacao.info {
+            border-left-color: #2196F3;
+        }
+
         @keyframes slideDown {
             from {
                 transform: translateY(-100%);
@@ -1014,53 +1018,110 @@
             
             if (!navigator.geolocation) {
                 console.error('❌ Geolocalização não suportada');
-                mostrarNotificacao('Geolocalização não suportada', 'erro');
-                gpsCarregado = true;
-                atualizarStatusGPS();
+                mostrarNotificacao('Geolocalização não suportada neste navegador', 'erro');
+                usarLocalizacaoPadrao();
                 return;
             }
 
-            // TIMEOUT para GPS
+            // Mostrar feedback visual de carregamento
+            mostrarNotificacao('🔍 Detectando sua localização...', 'info');
+            
+            // Timeout mais generoso para GPS
             const timeoutId = setTimeout(() => {
                 if (!gpsCarregado) {
-                    console.warn('⏱️ GPS timeout - usando padrão');
-                    gpsCarregado = true;
-                    mostrarNotificacao('Usando localização padrão', 'alerta');
-                    atualizarStatusGPS();
-                    calcularHorarios();
-                    renderizarLista();
+                    console.warn('⏱️ GPS timeout - tentando fallback');
+                    tentarFallbackLocalizacao();
                 }
-            }, 8000);
+            }, 15000);
 
+            // Primeira tentativa com alta precisão
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     clearTimeout(timeoutId);
-                    console.log('✓ GPS obtido:', position.coords);
-                    localizacaoAtual = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    };
-                    gpsCarregado = true;
-                    atualizarStatusGPS();
-                    calcularHorarios();
-                    renderizarLista();
+                    console.log('✓ GPS obtido com alta precisão:', position.coords);
+                    definirLocalizacao(position.coords, 'GPS de alta precisão');
+                    iniciarWatchPosition();
+                },
+                (error) => {
+                    console.warn('❌ Erro GPS alta precisão:', error.code, error.message);
+                    // Tentar novamente com baixa precisão
+                    tentarGPSBaixaPrecisao(timeoutId);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 12000,
+                    maximumAge: 60000 // Aceitar localização de até 1 minuto atrás
+                }
+            );
+        }
+
+        function tentarGPSBaixaPrecisao(timeoutId) {
+            console.log('🔄 Tentando GPS com baixa precisão...');
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    clearTimeout(timeoutId);
+                    console.log('✓ GPS obtido com baixa precisão:', position.coords);
+                    definirLocalizacao(position.coords, 'GPS de baixa precisão');
                     iniciarWatchPosition();
                 },
                 (error) => {
                     clearTimeout(timeoutId);
-                    console.error('❌ Erro GPS:', error.code, error.message);
-                    gpsCarregado = true;
-                    mostrarNotificacao('Usando localização padrão (Atibaia)', 'alerta');
-                    atualizarStatusGPS();
-                    calcularHorarios();
-                    renderizarLista();
+                    console.error('❌ Erro GPS baixa precisão:', error.code, error.message);
+                    tentarFallbackLocalizacao();
                 },
                 {
-                    enableHighAccuracy: true,
-                    timeout: 7000,
-                    maximumAge: 0
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 300000 // Aceitar localização de até 5 minutos atrás
                 }
             );
+        }
+
+        function tentarFallbackLocalizacao() {
+            console.log('🔄 Tentando localização por IP...');
+            mostrarNotificacao('🌐 Tentando localizar por IP...', 'info');
+            
+            // Fallback usando API de geolocalização por IP
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.latitude && data.longitude) {
+                        console.log('✓ Localização por IP obtida:', data);
+                        definirLocalizacao({
+                            latitude: data.latitude,
+                            longitude: data.longitude,
+                            accuracy: 10000 // Precisão estimada para IP
+                        }, `Localização por IP (${data.city}, ${data.region})`);
+                    } else {
+                        throw new Error('Dados de localização inválidos');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Erro localização por IP:', error);
+                    usarLocalizacaoPadrao();
+                });
+        }
+
+        function definirLocalizacao(coords, fonte) {
+            localizacaoAtual = {
+                latitude: coords.latitude,
+                longitude: coords.longitude
+            };
+            gpsCarregado = true;
+            atualizarStatusGPS(fonte);
+            mostrarNotificacao(`✓ Localização obtida via ${fonte}`, 'sucesso');
+            calcularHorarios();
+            renderizarLista();
+        }
+
+        function usarLocalizacaoPadrao() {
+            console.log('📍 Usando localização padrão (Atibaia)');
+            definirLocalizacao({
+                latitude: -23.1175,
+                longitude: -46.5500,
+                accuracy: 50000
+            }, 'localização padrão (Atibaia)');
         }
 
         function iniciarWatchPosition() {
@@ -1085,13 +1146,33 @@
             );
         }
 
-        function atualizarStatusGPS() {
+        function atualizarStatusGPS(fonte = null) {
             const statusEl = document.getElementById('statusGPS');
             if (gpsCarregado) {
-                statusEl.textContent = '✓ GPS Ativo';
-                statusEl.className = 'status-gps ativo';
+                if (fonte) {
+                    // Mostrar fonte da localização
+                    if (fonte.includes('alta precisão')) {
+                        statusEl.textContent = '🎯 GPS Preciso';
+                        statusEl.className = 'status-gps ativo';
+                    } else if (fonte.includes('baixa precisão')) {
+                        statusEl.textContent = '📍 GPS Ativo';
+                        statusEl.className = 'status-gps ativo';
+                    } else if (fonte.includes('IP')) {
+                        statusEl.textContent = '🌐 Localização IP';
+                        statusEl.className = 'status-gps ativo';
+                    } else if (fonte.includes('padrão')) {
+                        statusEl.textContent = '📍 Localização Padrão';
+                        statusEl.className = 'status-gps ativo';
+                    } else {
+                        statusEl.textContent = '✓ GPS Ativo';
+                        statusEl.className = 'status-gps ativo';
+                    }
+                } else {
+                    statusEl.textContent = '✓ GPS Ativo';
+                    statusEl.className = 'status-gps ativo';
+                }
             } else {
-                statusEl.textContent = '📍 Detectando...';
+                statusEl.textContent = '🔍 Detectando...';
                 statusEl.className = 'status-gps carregando';
             }
         }
