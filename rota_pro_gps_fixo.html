@@ -906,10 +906,8 @@
         
         // Função para obter API key de forma segura
         function getGoogleMapsApiKey() {
-            // Em produção, a API key deve ser configurada como variável de ambiente na Vercel
-            // Para desenvolvimento local, use um arquivo .env.local (não commitado)
-            const apiKey = process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 
-                          window?.GOOGLE_MAPS_API_KEY || 
+            // A API key é injetada durante o build via window.GOOGLE_MAPS_API_KEY
+            const apiKey = window?.GOOGLE_MAPS_API_KEY || 
                           "CONFIGURE_SUA_API_KEY_NAS_VARIAVEIS_DE_AMBIENTE";
             
             if (apiKey === "CONFIGURE_SUA_API_KEY_NAS_VARIAVEIS_DE_AMBIENTE") {
