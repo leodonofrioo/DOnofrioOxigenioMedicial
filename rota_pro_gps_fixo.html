@@ -782,6 +782,51 @@
             cursor: pointer;
         }
         .btn-definir:hover { background: #24336b; }
+
+        /* Modal de localização manual */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100; /* acima das notificações */
+        }
+        .modal-overlay.visivel { display: flex; }
+        .modal {
+            background: #0f1632;
+            border: 1px solid #1a2349;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 440px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            color: #e5e7ff;
+        }
+        .modal h3 { margin: 0 0 12px 0; font-size: 16px; }
+        .modal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .modal label { font-size: 12px; margin-bottom: 4px; display: block; }
+        .modal input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #2b3a6d;
+            border-radius: 6px;
+            background: #121a3f;
+            color: #e5e7ff;
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+        .btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn.cancelar { background: #232a49; color: #e5e7ff; border-color: #39406b; }
+        .btn.cancelar:hover { background: #1a2144; }
+        .btn.confirmar { background: #2f53d8; color: #fff; border-color: #2f53d8; }
+        .btn.confirmar:hover { background: #284bc2; }
     </style>
 </head>
 <body>
@@ -794,6 +839,26 @@
                 <div class="status-gps" id="statusGPS">📍 Detectando...</div>
                 <div class="gps-actions">
                     <button id="btnDefinirLocalizacao" class="btn-definir">Definir localização manual</button>
+                </div>
+                <!-- Modal de localização manual -->
+                <div class="modal-overlay" id="modalLocalizacao" aria-hidden="true" role="dialog" aria-labelledby="modalLocTitulo">
+                    <div class="modal" role="document">
+                        <h3 id="modalLocTitulo">Definir localização manual</h3>
+                        <div class="modal-fields">
+                            <div class="campo">
+                                <label for="inputLat">Latitude</label>
+                                <input id="inputLat" type="text" inputmode="decimal" placeholder="-23.550520" autocomplete="off" />
+                            </div>
+                            <div class="campo">
+                                <label for="inputLon">Longitude</label>
+                                <input id="inputLon" type="text" inputmode="decimal" placeholder="-46.633308" autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn cancelar" id="btnCancelarLoc" type="button">Cancelar</button>
+                            <button class="btn confirmar" id="btnConfirmarLoc" type="button">Confirmar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1436,6 +1501,21 @@
             }, 2500);
         }
 
+        // Modal manual de localização
+        function abrirModalLocalizacaoManual() {
+            const overlay = document.getElementById('modalLocalizacao');
+            const inputLat = document.getElementById('inputLat');
+            overlay.classList.add('visivel');
+            overlay.setAttribute('aria-hidden', 'false');
+            setTimeout(() => inputLat && inputLat.focus(), 0);
+        }
+
+        function fecharModalLocalizacaoManual() {
+            const overlay = document.getElementById('modalLocalizacao');
+            overlay.classList.remove('visivel');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
         // INICIAR TUDO QUANDO PÁGINA CARREGAR
         window.addEventListener('load', () => {
             console.log('📱 Página carregada - iniciando GPS');
@@ -1443,23 +1523,41 @@
 
             const btn = document.getElementById('btnDefinirLocalizacao');
             if (btn) {
-                btn.addEventListener('click', () => {
-                    const valor = window.prompt('Digite latitude,longitude (ex.: -23.55,-46.63):');
-                    if (!valor) return;
-                    const partes = valor.split(',').map(v => v.trim());
-                    if (partes.length !== 2) {
-                        mostrarNotificacao('Formato inválido. Use: lat,lon', 'erro');
-                        return;
-                    }
-                    const lat = Number(partes[0]);
-                    const lon = Number(partes[1]);
-                    if (Number.isNaN(lat) || Number.isNaN(lon)) {
-                        mostrarNotificacao('Valores inválidos. Use números.', 'erro');
-                        return;
-                    }
-                    definirLocalizacao({ latitude: lat, longitude: lon, accuracy: 5000 }, 'localização manual');
+                btn.addEventListener('click', abrirModalLocalizacaoManual);
+            }
+
+            const overlay = document.getElementById('modalLocalizacao');
+            const inputLat = document.getElementById('inputLat');
+            const inputLon = document.getElementById('inputLon');
+            const btnCancelar = document.getElementById('btnCancelarLoc');
+            const btnConfirmar = document.getElementById('btnConfirmarLoc');
+
+            if (btnCancelar) btnCancelar.addEventListener('click', fecharModalLocalizacaoManual);
+            if (btnConfirmar) btnConfirmar.addEventListener('click', () => {
+                const latStr = (inputLat?.value || '').trim().replace(',', '.');
+                const lonStr = (inputLon?.value || '').trim().replace(',', '.');
+                const lat = Number(latStr);
+                const lon = Number(lonStr);
+                if (Number.isNaN(lat) || Number.isNaN(lon)) {
+                    mostrarNotificacao('Valores inválidos. Use números.', 'erro');
+                    return;
+                }
+                definirLocalizacao({ latitude: lat, longitude: lon, accuracy: 5000 }, 'localização manual');
+                fecharModalLocalizacaoManual();
+            });
+
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) fecharModalLocalizacaoManual();
                 });
             }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const ov = document.getElementById('modalLocalizacao');
+                    if (ov && ov.classList.contains('visivel')) fecharModalLocalizacaoManual();
+                }
+            });
         });
 
         // TAMBÉM TENTA LOGO AO ABRIR (para mobile)
