@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/rota_pro_gps_fixo.html"
+      "dest": "/index.html"
     }
   ],
   "headers": [
