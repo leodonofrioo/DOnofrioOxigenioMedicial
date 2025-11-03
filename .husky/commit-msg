@@ -1,0 +1,2 @@
+echo "📝 Commit-msg: validando Conventional Commits"
+npx --no commitlint --edit .git/COMMIT_EDITMSG
